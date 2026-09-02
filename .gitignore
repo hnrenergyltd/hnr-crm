@@ -7,10 +7,11 @@ yarn-error.log*
 # Database
 *.db
 *.sqlite
+crm.db
 
-# Build
-build/
-dist/
+# Build - Only exclude backend build if you use it
+# build/
+# dist/
 
 # Environment
 .env
@@ -27,3 +28,5 @@ dist/
 
 # Misc
 .cache/
+uploads/
+.git/
