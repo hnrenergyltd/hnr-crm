@@ -1,0 +1,12 @@
+{
+  "name": "hnr-crm",
+  "version": "1.0.0",
+  "description": "HNR Energy Solutions CRM",
+  "scripts": {
+    "start": "npm install && cd backend && npm install && node server.js",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd .."
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1"
+  }
+}

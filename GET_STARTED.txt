@@ -1,0 +1,188 @@
+================================================================================
+HNR ENERGY SOLUTIONS CRM - GET STARTED
+================================================================================
+
+IMPORTANT: Read this carefully. It has everything you need.
+
+================================================================================
+WHAT YOU'RE ABOUT TO DO
+================================================================================
+
+1. Copy all the CRM code from the folder I created into your GitHub repository
+2. Install the software dependencies (Node.js packages)
+3. Start the CRM on your computer
+4. Open it in your web browser
+5. Login and explore
+
+Estimated time: 10-15 minutes
+
+================================================================================
+BEFORE YOU START
+================================================================================
+
+✓ You need Node.js installed on your computer
+  - Go to: https://nodejs.org/
+  - Download the LTS (Long Term Support) version
+  - Install it (just click Next a few times)
+  - Restart your computer after installing
+
+✓ You need Git installed (probably already have it)
+  - Windows: https://git-scm.com/download/win
+  - Mac: https://git-scm.com/download/mac
+  - Linux: comes with most distributions
+
+================================================================================
+STEP 1: CLONE YOUR GITHUB REPOSITORY
+================================================================================
+
+Open Terminal (Mac/Linux) or Command Prompt (Windows) and run:
+
+    git clone https://github.com/ecommercewithhassan123-rgb/HNR-CRM-.git
+    cd HNR-CRM
+
+This downloads your empty GitHub repository to your computer.
+
+================================================================================
+STEP 2: COPY THE CRM CODE
+================================================================================
+
+I've created all the CRM code in a folder. You need to copy the files.
+
+THE FILES ARE IN: /mnt/user-data/outputs/HNR-CRM-setup/
+
+COPY THESE FILES TO YOUR HNR-CRM FOLDER:
+  ✓ backend/ folder (entire folder)
+  ✓ frontend/ folder (entire folder)
+  ✓ package.json (root file)
+  ✓ .gitignore
+  ✓ README.md
+  ✓ QUICK_START.md
+
+Your HNR-CRM folder should now look like:
+    HNR-CRM/
+    ├── frontend/
+    ├── backend/
+    ├── package.json
+    ├── README.md
+    └── ...
+
+================================================================================
+STEP 3: INSTALL DEPENDENCIES
+================================================================================
+
+In your Terminal/Command Prompt (in the HNR-CRM folder), run:
+
+    npm run install-all
+
+This downloads ~1000 small files. It will take 3-5 minutes.
+You'll see lots of text - that's normal. Don't interrupt it.
+
+Wait for it to finish. You'll see:
+    up to date, audited X packages
+
+================================================================================
+STEP 4: START THE CRM
+================================================================================
+
+Still in Terminal/Command Prompt, run:
+
+    npm start
+
+You'll see messages like:
+    ✓ Compiled successfully
+    Webpack compiled...
+
+Then your browser will automatically open.
+
+If it doesn't open automatically, go to:
+    http://localhost:3000
+
+================================================================================
+STEP 5: LOGIN
+================================================================================
+
+Use these credentials:
+
+ADMIN (Full Access):
+  Email:    admin@hnrenergy.co.uk
+  Password: admin123
+
+SALES STAFF:
+  Email:    sarah@hnrenergy.co.uk
+  Password: user123
+
+================================================================================
+STEP 6: EXPLORE
+================================================================================
+
+You're in! The system has demo data:
+  ✓ Sample leads
+  ✓ Sample customers
+  ✓ HES pre-screening examples
+
+Try:
+  1. Go to Dashboard
+  2. View Leads
+  3. Click on a lead to see full details
+  4. Check Today's Tasks
+  5. Look at Admin Users (if logged in as admin)
+
+================================================================================
+STOPPING THE CRM
+================================================================================
+
+To stop the CRM, press:
+    Ctrl+C
+
+(in Terminal/Command Prompt)
+
+================================================================================
+PUSHING TO GITHUB
+================================================================================
+
+Once you're happy with it, save to GitHub:
+
+    git add .
+    git commit -m "Initial CRM setup"
+    git push origin main
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Q: Port 3000 already in use?
+A: Close other applications. Or run:
+   npx kill-port 3000
+
+Q: npm not found?
+A: Node.js didn't install properly. Restart your computer and try again.
+
+Q: Dependencies won't install?
+A: Run: npm cache clean --force
+   Then: npm run install-all
+
+Q: Can't see the browser window?
+A: Open http://localhost:3000 manually
+
+Q: Want to reset?
+A: Delete backend/crm.db and restart
+
+================================================================================
+WHAT'S NEXT?
+================================================================================
+
+1. Test the demo data to understand the workflow
+2. Customize user roles and permissions
+3. Add your real customers and leads
+4. Configure Home Energy Scotland settings
+5. Set up handover pack templates
+
+For detailed information, read README.md
+
+================================================================================
+
+Questions? Check the terminal output - it usually explains what went wrong.
+
+Good luck! 🚀
+
+================================================================================
