@@ -168,8 +168,14 @@ function initializeDatabase() {
       else console.log('✅ HES Eligibility table ready');
     });
 
+    // Repair any leads saved with an empty/NULL status, priority or potential
+    // (an empty status crashes the leads list on the frontend). Runs every start.
+    db.run(`UPDATE leads SET status = 'new' WHERE status IS NULL OR status = ''`, () => {});
+    db.run(`UPDATE leads SET priority = 'medium' WHERE priority IS NULL OR priority = ''`, () => {});
+    db.run(`UPDATE leads SET potential_level = 'none' WHERE potential_level IS NULL OR potential_level = ''`, () => {});
+
     // Seed demo data only if empty
-  setTimeout(() => seedDemoData(), 500);
+    setTimeout(() => seedDemoData(), 500);
   });
 }
 
@@ -319,7 +325,12 @@ app.get('/api/leads/:id', authenticateToken, (req, res) => {
 });
 
 app.post('/api/leads', authenticateToken, (req, res) => {
-  const { name, phone, email, address, postcode, lead_source, priority, status, potential_level, interested_measures, notes } = req.body;
+  const { name, phone, email, address, postcode, lead_source, interested_measures, notes } = req.body;
+  // Default these so a new lead is never saved with an empty status/priority/
+  // potential - an empty status crashes the leads list (lead.status.replace).
+  const status = req.body.status || 'new';
+  const priority = req.body.priority || 'medium';
+  const potential_level = req.body.potential_level || 'none';
   const leadId = uuidv4();
   const now = new Date().toISOString();
 
