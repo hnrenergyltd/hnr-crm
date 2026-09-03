@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Pages.css';
 
-import { useNavigate } from 'react-router-dom';
 
 export default function LeadsList() {
   const navigate = useNavigate();
