@@ -165,7 +165,7 @@ function initializeDatabase() {
     });
 
     // Seed demo data only if empty
-    //setTimeout(() => seedDemoData(), 500);
+  setTimeout(() => seedDemoData(), 500);
   });
 }
 
