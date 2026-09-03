@@ -14,8 +14,20 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const SECRET_KEY = 'your_secret_key_change_in_production';
 
+// ---------------------------------------------------------------------------
+// DATA DIRECTORY
+// Everything that must survive a restart (the SQLite database and uploaded
+// documents) lives here. On Render's free tier the filesystem is WIPED on every
+// deploy and restart, so this defaults to the app folder (data is temporary).
+// Attach a Render persistent disk and set DATA_DIR (e.g. /var/data) to keep
+// data permanently - no code changes needed.
+// ---------------------------------------------------------------------------
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+console.log('📁 Data directory:', DATA_DIR);
+
 // Setup file upload
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = path.join(DATA_DIR, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -24,12 +36,67 @@ const storage = multer.diskStorage({
     cb(null, `${uuidv4()}-${file.originalname}`);
   }
 });
-const upload = multer({ storage });
+
+// 50MB cap, matching the limit shown in the upload form.
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+
+// The upload form sends the file under the field name "document".
+// We also accept "file" so older/cached copies of the frontend keep working.
+const handoverUploadFields = upload.fields([
+  { name: 'document', maxCount: 1 },
+  { name: 'file', maxCount: 1 }
+]);
+
+// Wrap multer so upload problems come back as clean JSON the UI can display,
+// instead of an HTML error page.
+function handoverUpload(req, res, next) {
+  handoverUploadFields(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File is too large. The maximum size is 50MB.' });
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'Unexpected file field. Please refresh the page (Ctrl+Shift+R) and try again.' });
+    }
+    console.error('Upload error:', err);
+    return res.status(400).json({ error: err.message || 'File upload failed' });
+  });
+}
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+// ---------------------------------------------------------------------------
+// DOCUMENT DOWNLOAD
+// Files are stored on disk with a unique name (uuid-originalname) so two
+// uploads can never overwrite each other. This route looks the original
+// filename back up so the customer downloads "Certificate.pdf" rather than
+// "a3f9c1e2-...-Certificate.pdf".
+// ---------------------------------------------------------------------------
+app.get('/uploads/:filename', (req, res, next) => {
+  const filePath = path.join(uploadsDir, req.params.filename);
+
+  // Safety: never serve anything outside the uploads folder.
+  if (!path.resolve(filePath).startsWith(path.resolve(uploadsDir))) {
+    return res.status(400).send('Invalid file path');
+  }
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('File not found. It may have been removed by a server restart.');
+  }
+
+  db.get(
+    'SELECT file_name FROM handover_documents WHERE file_path = ?',
+    [`/uploads/${req.params.filename}`],
+    (err, doc) => {
+      const downloadName = (!err && doc && doc.file_name) ? doc.file_name : req.params.filename;
+      res.download(filePath, downloadName, (dlErr) => {
+        if (dlErr && !res.headersSent) next(dlErr);
+      });
+    }
+  );
+});
+
 app.use('/uploads', express.static(uploadsDir));
 
 // Serve React Frontend
@@ -40,7 +107,7 @@ if (fs.existsSync(frontendBuildPath)) {
 }
 
 // SQLite Database
-const dbPath = path.join(__dirname, 'crm.db');
+const dbPath = path.join(DATA_DIR, 'crm.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Database error:', err);
@@ -445,18 +512,33 @@ app.get('/api/leads/:id/hes-screening', authenticateToken, (req, res) => {
 
 // ============ HANDOVER PACK ENDPOINTS ============
 
-app.post('/api/leads/:id/handover/upload', authenticateToken, upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file provided' });
+app.post('/api/leads/:id/handover/upload', authenticateToken, handoverUpload, (req, res) => {
+  // The form posts the file as "document"; "file" is accepted as a fallback.
+  const file = (req.files && req.files.document && req.files.document[0])
+            || (req.files && req.files.file && req.files.file[0]);
+
+  if (!file) return res.status(400).json({ error: 'No file provided. Please choose a file and try again.' });
 
   const docId = uuidv4();
-  const document_type = req.body.document_type || 'Other';
+  const document_type = req.body.document_type || 'Other Document';
+  const storedPath = `/uploads/${file.filename}`;
 
   db.run(
     `INSERT INTO handover_documents (id, lead_id, document_type, file_name, file_path, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)`,
-    [docId, req.params.id, document_type, req.file.originalname, `/uploads/${req.file.filename}`, req.user.email],
+    [docId, req.params.id, document_type, file.originalname, storedPath, req.user.email],
     function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: 'Document uploaded successfully', file_path: `/uploads/${req.file.filename}` });
+      if (err) {
+        // Don't leave an orphaned file on disk if the database insert fails.
+        fs.unlink(path.join(uploadsDir, file.filename), () => {});
+        return res.status(500).json({ error: err.message });
+      }
+      logActivity(req.params.id, req.user.email, 'Document uploaded', '', document_type, file.originalname);
+      res.json({
+        message: 'Document uploaded successfully',
+        id: docId,
+        file_name: file.originalname,
+        file_path: storedPath
+      });
     }
   );
 });
@@ -472,11 +554,17 @@ app.get('/api/leads/:id/handover/documents', authenticateToken, (req, res) => {
 app.delete('/api/leads/:leadId/handover/documents/:docId', authenticateToken, (req, res) => {
   const { docId } = req.params;
   
-  db.get('SELECT file_path FROM handover_documents WHERE id = ?', [docId], (err, doc) => {
+  db.get('SELECT file_path, file_name FROM handover_documents WHERE id = ?', [docId], (err, doc) => {
     if (err || !doc) return res.status(404).json({ error: 'Document not found' });
 
     db.run('DELETE FROM handover_documents WHERE id = ?', [docId], function(err) {
       if (err) return res.status(500).json({ error: err.message });
+
+      // Remove the actual file from disk so deleted documents don't use up space.
+      if (doc.file_path) {
+        fs.unlink(path.join(uploadsDir, path.basename(doc.file_path)), () => {});
+      }
+      logActivity(req.params.leadId, req.user.email, 'Document deleted', doc.file_name || '', '', 'Handover document removed');
       res.json({ message: 'Document deleted successfully' });
     });
   });
