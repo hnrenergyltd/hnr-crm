@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Pages.css';
 
-export default function LeadsList({ onSelectLead }) {
+import { useNavigate } from 'react-router-dom';
+
+export default function LeadsList() {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,7 +55,7 @@ export default function LeadsList({ onSelectLead }) {
                 <td>{lead.status}</td>
                 <td>{lead.potential_level}</td>
                 <td>
-                  <button onClick={() => onSelectLead(lead.id)}>View</button>
+                  <button onClick={() => navigate(`/lead/${lead.id}`)}>View</button>
                 </td>
               </tr>
             ))}
