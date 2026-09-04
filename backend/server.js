@@ -173,7 +173,7 @@ function initializeDatabase() {
     // Add a JSON column to hold the full HES screening form (EPC, opportunities,
     // funding route, etc.). ALTER is guarded - it harmlessly errors if it already exists.
     db.run(`ALTER TABLE hes_screening ADD COLUMN screening_json TEXT`, () => {});
-
+      
     // Handover Documents table
     db.run(`CREATE TABLE IF NOT EXISTS handover_documents (
       id TEXT PRIMARY KEY,
@@ -272,7 +272,7 @@ function seedDemoData() {
           [user.id, user.name, user.email, user.password, user.role]
         );
       });
-
+    }
       const leads = [
         { name: 'Jane Smith', phone: '0141 123 4567', email: 'jane@example.com', postcode: 'G5 2LF', status: 'new', potential: 'high_potential', measures: 'Air Source Heat Pump,Loft Insulation' },
         { name: 'Mike Brown', phone: '0141 234 5678', email: 'mike@example.com', postcode: 'G3 8QQ', status: 'callback', potential: 'potential', measures: 'Solar Panels' },
