@@ -246,86 +246,87 @@ function initializeDatabase() {
   });
 }
 
-// Seed Demo Data
+// Seed Demo Data - FIXED VERSION
 function seedDemoData() {
   db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
     if (err) {
       console.error('Error checking users:', err);
       return;
     }
-    
+
     if (row && row.count === 0) {
       console.log('🌱 Seeding demo data...');
-      
-      const adminPass = bcrypt.hashSync('admin123', 10);
-      const userPass = bcrypt.hashSync('user123', 10);
-      
-      const users = [
-        { id: uuidv4(), name: 'Riaz', email: 'riaz@hnrenergy.co.uk', password: adminPass, role: 'admin' },
-        { id: uuidv4(), name: 'Mudassir', email: 'mudassir@hnrenergy.co.uk', password: userPass, role: 'user' },
-        { id: uuidv4(), name: 'Hassan', email: 'hassan@hnrenergy.co.uk', password: userPass, role: 'user' }
-      ];
 
-      users.forEach(user => {
-        db.run(
-          `INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-          [user.id, user.name, user.email, user.password, user.role]
-        );
+      db.serialize(() => {
+        const adminPass = bcrypt.hashSync('admin123', 10);
+        const userPass = bcrypt.hashSync('user123', 10);
+
+        const users = [
+          { id: uuidv4(), name: 'Riaz', email: 'riaz@hnrenergy.co.uk', password: adminPass, role: 'admin' },
+          { id: uuidv4(), name: 'Mudassir', email: 'mudassir@hnrenergy.co.uk', password: userPass, role: 'user' },
+          { id: uuidv4(), name: 'Hassan', email: 'hassan@hnrenergy.co.uk', password: userPass, role: 'user' }
+        ];
+
+        users.forEach(user => {
+          db.run(
+            `INSERT INTO users (id, name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [user.id, user.name, user.email, user.password, user.role]
+          );
+        });
+
+        const leads = [
+          { name: 'Jane Smith', phone: '0141 123 4567', email: 'jane@example.com', postcode: 'G5 2LF', status: 'new', potential: 'high_potential', measures: 'Air Source Heat Pump,Loft Insulation' },
+          { name: 'Mike Brown', phone: '0141 234 5678', email: 'mike@example.com', postcode: 'G3 8QQ', status: 'callback', potential: 'potential', measures: 'Solar Panels' },
+          { name: 'Emma Davis', phone: '0141 345 6789', email: 'emma@example.com', postcode: 'G2 1RP', status: 'survey_booked', potential: 'very_high_potential', measures: 'Heat Pump,Insulation' },
+          { name: 'John Wilson', phone: '0131 123 4567', email: 'john@example.com', postcode: 'EH8 8DX', status: 'survey_complete', potential: 'high_potential', measures: 'Boiler Replacement' },
+          { name: 'Sarah Thompson', phone: '0131 234 5678', email: 'sarah@example.com', postcode: 'EH7 5AA', status: 'quote_sent', potential: 'potential', measures: 'Loft Insulation' },
+          { name: 'David Miller', phone: '0141 456 7890', email: 'david@example.com', postcode: 'G61 2QQ', status: 'awaiting_hes', potential: 'none', measures: 'Air Source Heat Pump' },
+          { name: 'Lisa Anderson', phone: '0141 567 8901', email: 'lisa@example.com', postcode: 'G12 0XQ', status: 'hes_approved', potential: 'high_potential', measures: 'Heat Pump,Solar' },
+          { name: 'Robert Taylor', phone: '0131 345 6789', email: 'robert@example.com', postcode: 'EH5 2AB', status: 'installation_booked', potential: 'potential', measures: 'Cavity Wall Insulation' },
+          { name: 'Caroline White', phone: '0141 678 9012', email: 'caroline@example.com', postcode: 'G45 9AQ', status: 'installed', potential: 'high_potential', measures: 'Air Source Heat Pump' },
+          { name: 'Thomas Clark', phone: '0131 456 7890', email: 'thomas@example.com', postcode: 'EH3 6TG', status: 'handover', potential: 'very_high_potential', measures: 'Heat Pump,Loft Insulation' },
+          { name: 'Victoria Martin', phone: '0141 789 0123', email: 'victoria@example.com', postcode: 'G4 0DH', status: 'completed', potential: 'none', measures: 'Solar Panels' },
+          { name: 'James Lewis', phone: '0131 567 8901', email: 'james@example.com', postcode: 'EH9 2TR', status: 'dead_lost', potential: 'none', measures: 'Heat Pump' }
+        ];
+
+        const seededLeads = [];
+        leads.forEach(lead => {
+          const leadId = uuidv4();
+          const now = new Date().toISOString();
+          seededLeads.push({ id: leadId, name: lead.name, status: lead.status });
+          db.run(
+            `INSERT INTO leads (id, name, phone, email, address, postcode, lead_source, priority, status, potential_level, interested_measures, notes, created_at, created_by, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [leadId, lead.name, lead.phone, lead.email, '', lead.postcode, 'Direct', 'Medium Priority', lead.status, lead.potential, lead.measures, '', now, 'system', now]
+          );
+        });
+
+        const sampleActions = [
+          { action: 'Call to confirm survey appointment', assigned: 'Mudassir', status: 'pending', notes: 'Confirm morning slot' },
+          { action: 'Send quote follow-up email', assigned: 'Hassan', status: 'pending', notes: 'Chase decision on quote' },
+          { action: 'Book HES eligibility assessment', assigned: 'Mudassir', status: 'pending', notes: 'Awaiting HES paperwork' },
+          { action: 'Arrange installation date', assigned: 'Riaz', status: 'in_progress', notes: 'Customer prefers next week' },
+          { action: 'Complete handover pack', assigned: 'Hassan', status: 'pending', notes: 'Collect signed documents' },
+          { action: 'Callback interested customer', assigned: 'Mudassir', status: 'pending', notes: 'Left voicemail earlier' }
+        ];
+
+        seededLeads.slice(0, sampleActions.length).forEach((l, i) => {
+          const a = sampleActions[i];
+          db.run(
+            `INSERT INTO next_actions (id, lead_id, action, due_date, assigned_to, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [uuidv4(), l.id, a.action, new Date().toISOString(), a.assigned, a.status, a.notes]
+          );
+          db.run(
+            `INSERT INTO activity_timeline (id, lead_id, user_email, action, old_value, new_value, details) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [uuidv4(), l.id, 'system', 'Lead created', '', l.status, 'Imported from demo data']
+          );
+        });
+
+        console.log('✅ Demo data seeded successfully');
       });
-    }
-      const leads = [
-        { name: 'Jane Smith', phone: '0141 123 4567', email: 'jane@example.com', postcode: 'G5 2LF', status: 'new', potential: 'high_potential', measures: 'Air Source Heat Pump,Loft Insulation' },
-        { name: 'Mike Brown', phone: '0141 234 5678', email: 'mike@example.com', postcode: 'G3 8QQ', status: 'callback', potential: 'potential', measures: 'Solar Panels' },
-        { name: 'Emma Davis', phone: '0141 345 6789', email: 'emma@example.com', postcode: 'G2 1RP', status: 'survey_booked', potential: 'very_high_potential', measures: 'Heat Pump,Insulation' },
-        { name: 'John Wilson', phone: '0131 123 4567', email: 'john@example.com', postcode: 'EH8 8DX', status: 'survey_complete', potential: 'high_potential', measures: 'Boiler Replacement' },
-        { name: 'Sarah Thompson', phone: '0131 234 5678', email: 'sarah@example.com', postcode: 'EH7 5AA', status: 'quote_sent', potential: 'potential', measures: 'Loft Insulation' },
-        { name: 'David Miller', phone: '0141 456 7890', email: 'david@example.com', postcode: 'G61 2QQ', status: 'awaiting_hes', potential: 'none', measures: 'Air Source Heat Pump' },
-        { name: 'Lisa Anderson', phone: '0141 567 8901', email: 'lisa@example.com', postcode: 'G12 0XQ', status: 'hes_approved', potential: 'high_potential', measures: 'Heat Pump,Solar' },
-        { name: 'Robert Taylor', phone: '0131 345 6789', email: 'robert@example.com', postcode: 'EH5 2AB', status: 'installation_booked', potential: 'potential', measures: 'Cavity Wall Insulation' },
-        { name: 'Caroline White', phone: '0141 678 9012', email: 'caroline@example.com', postcode: 'G45 9AQ', status: 'installed', potential: 'high_potential', measures: 'Air Source Heat Pump' },
-        { name: 'Thomas Clark', phone: '0131 456 7890', email: 'thomas@example.com', postcode: 'EH3 6TG', status: 'handover', potential: 'very_high_potential', measures: 'Heat Pump,Loft Insulation' },
-        { name: 'Victoria Martin', phone: '0141 789 0123', email: 'victoria@example.com', postcode: 'G4 0DH', status: 'completed', potential: 'none', measures: 'Solar Panels' },
-        { name: 'James Lewis', phone: '0131 567 8901', email: 'james@example.com', postcode: 'EH9 2TR', status: 'dead_lost', potential: 'none', measures: 'Heat Pump' }
-      ];
-
-      const seededLeads = [];
-      leads.forEach(lead => {
-        const leadId = uuidv4();
-        const now = new Date().toISOString();
-        seededLeads.push({ id: leadId, name: lead.name, status: lead.status });
-        db.run(
-          `INSERT INTO leads (id, name, phone, email, address, postcode, lead_source, priority, status, potential_level, interested_measures, notes, created_at, created_by, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [leadId, lead.name, lead.phone, lead.email, '', lead.postcode, 'Direct', 'Medium Priority', lead.status, lead.potential, lead.measures, '', now, 'system', now]
-        );
-      });
-
-      // Seed sample tasks for "Today's Tasks" and matching activity entries
-      const sampleActions = [
-        { action: 'Call to confirm survey appointment', assigned: 'Mudassir', status: 'pending', notes: 'Confirm morning slot' },
-        { action: 'Send quote follow-up email', assigned: 'Hassan', status: 'pending', notes: 'Chase decision on quote' },
-        { action: 'Book HES eligibility assessment', assigned: 'Mudassir', status: 'pending', notes: 'Awaiting HES paperwork' },
-        { action: 'Arrange installation date', assigned: 'Riaz', status: 'in_progress', notes: 'Customer prefers next week' },
-        { action: 'Complete handover pack', assigned: 'Hassan', status: 'pending', notes: 'Collect signed documents' },
-        { action: 'Callback interested customer', assigned: 'Mudassir', status: 'pending', notes: 'Left voicemail earlier' }
-      ];
-      seededLeads.slice(0, sampleActions.length).forEach((l, i) => {
-        const a = sampleActions[i];
-        db.run(
-          `INSERT INTO next_actions (id, lead_id, action, due_date, assigned_to, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [uuidv4(), l.id, a.action, new Date().toISOString(), a.assigned, a.status, a.notes]
-        );
-        db.run(
-          `INSERT INTO activity_timeline (id, lead_id, user_email, action, old_value, new_value, details) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [uuidv4(), l.id, 'system', 'Lead created', '', l.status, 'Imported from demo data']
-        );
-      });
-
-      console.log('✅ Demo data seeded successfully');
     }
   });
 }
-
 // Authenticate Token Middleware
 function authenticateToken(req, res, next) {
   const token = req.headers['authorization']?.split(' ')[1];
