@@ -139,6 +139,7 @@ export default function LeadsList() {
       'survey_booked': 'badge-survey',
       'survey_complete': 'badge-survey-complete',
       'quote_sent': 'badge-quote',
+      'private_paid': 'badge-private-paid',
       'awaiting_hes': 'badge-awaiting',
       'hes_approved': 'badge-approved',
       'installed': 'badge-installed',
@@ -362,6 +363,9 @@ export default function LeadsList() {
                     </optgroup>
                     <optgroup label="Quote">
                       <option value="quote_sent">Quote Sent</option>
+                    </optgroup>
+                    <optgroup label="Private Paid">
+                      <option value="private_paid">Private Paid</option>
                     </optgroup>
                     <optgroup label="HES">
                       <option value="awaiting_hes">Awaiting HES</option>

@@ -233,14 +233,18 @@ export default function LeadProfile() {
                 {editMode ? (
                   <select value={lead.status} onChange={(e) => setLead({...lead, status: e.target.value})}>
                     <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="surveyed">Surveyed</option>
-                    <option value="quoted">Quoted</option>
+                    <option value="callback">Callback</option>
+                    <option value="survey_booked">Survey Booked</option>
+                    <option value="survey_complete">Survey Complete</option>
+                    <option value="quote_sent">Quote Sent</option>
+                    <option value="private_paid">Private Paid</option>
                     <option value="awaiting_hes">Awaiting HES</option>
-                    <option value="approved">Approved</option>
+                    <option value="hes_approved">HES Approved</option>
+                    <option value="installation_booked">Installation Booked</option>
                     <option value="installed">Installed</option>
+                    <option value="handover">Handover</option>
                     <option value="completed">Completed</option>
-                    <option value="lost">Lost</option>
+                    <option value="dead_lost">Dead / Lost</option>
                   </select>
                 ) : (
                   <p>{lead.status}</p>

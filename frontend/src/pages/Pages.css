@@ -530,3 +530,12 @@
 .timeline-details p {
   margin: 4px 0;
 }
+
+.badge-private-paid {
+  background: #fce4ec;
+  color: #880e4f;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
