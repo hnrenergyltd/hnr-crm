@@ -632,6 +632,7 @@ app.get('/api/pipeline-counts', authenticateToken, (req, res) => {
       (SELECT COUNT(*) FROM leads WHERE status = 'survey_booked') as survey_booked,
       (SELECT COUNT(*) FROM leads WHERE status = 'survey_complete') as survey_complete,
       (SELECT COUNT(*) FROM leads WHERE status = 'quote_sent') as quote_sent,
+      (SELECT COUNT(*) FROM leads WHERE status = 'private_paid') as private_paid,
       (SELECT COUNT(*) FROM leads WHERE status = 'awaiting_hes') as awaiting_hes,
       (SELECT COUNT(*) FROM leads WHERE status = 'hes_approved') as hes_approved,
       (SELECT COUNT(*) FROM leads WHERE status = 'installed') as installed,

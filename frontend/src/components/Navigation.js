@@ -45,6 +45,7 @@ export default function Navigation({ user, onLogout }) {
     { key: 'survey_booked', label: 'Survey Booked', filter: 'survey_booked' },
     { key: 'survey_complete', label: 'Survey Complete', filter: 'survey_complete' },
     { key: 'quote_sent', label: 'Quote Sent', filter: 'quote_sent' },
+    { key: 'private_paid', label: 'Private Paid', filter: 'private_paid' },
     { key: 'awaiting_hes', label: 'Awaiting HES', filter: 'awaiting_hes' },
     { key: 'hes_approved', label: 'HES Approved', filter: 'hes_approved' },
     { key: 'installed', label: 'Installed', filter: 'installed' },
