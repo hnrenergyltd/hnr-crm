@@ -203,6 +203,8 @@ export default function TodaysTasks({ user }) {
         user={user}
         onTaskCreated={handleTaskCreated}
       />
+      {showTaskModal && <TaskModal isOpen={showTaskModal} 
+      onClose={() => setShowTaskModal(false)} user={user} onTaskCreated={handleTaskCreated} />}
     </div>
   );
 }
