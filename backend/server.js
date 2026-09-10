@@ -235,6 +235,83 @@ function initializeDatabase() {
       else console.log('✅ HES Eligibility table ready');
     });
 
+    // ============ TASK MANAGEMENT TABLES (Phase 2) ============
+    // Additive only - none of the tables above are touched. FKs are declared for
+    // documentation but (like the rest of this DB) are not enforced by SQLite.
+    db.run(`CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'to_do',
+      priority TEXT DEFAULT 'medium',
+      category TEXT,
+      assigned_to_id TEXT NOT NULL,
+      created_by_id TEXT NOT NULL,
+      related_lead_id TEXT,
+      due_date DATE,
+      due_time TIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      archived INTEGER DEFAULT 0,
+      FOREIGN KEY(assigned_to_id) REFERENCES users(id),
+      FOREIGN KEY(created_by_id) REFERENCES users(id),
+      FOREIGN KEY(related_lead_id) REFERENCES leads(id)
+    )`, (err) => {
+      if (err) console.error('Tasks table error:', err);
+      else console.log('✅ Tasks table ready');
+    });
+    // db.run() executes only the FIRST statement in a string, so every index is
+    // its own call (the Phase 2 guide bundled these - they would be ignored).
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS task_comments (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      comment TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(task_id) REFERENCES tasks(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error('Task comments table error:', err);
+      else console.log('✅ Task comments table ready');
+    });
+    db.run(`CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id)`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS task_checklist_items (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(task_id) REFERENCES tasks(id)
+    )`, (err) => {
+      if (err) console.error('Task checklist table error:', err);
+      else console.log('✅ Task checklist table ready');
+    });
+    db.run(`CREATE INDEX IF NOT EXISTS idx_checklist_task ON task_checklist_items(task_id)`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS task_activity (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      action TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      details TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(task_id) REFERENCES tasks(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error('Task activity table error:', err);
+      else console.log('✅ Task activity table ready');
+    });
+    db.run(`CREATE INDEX IF NOT EXISTS idx_task_activity_task ON task_activity(task_id)`);
+
     // Repair any leads saved with an empty/NULL status, priority or potential
     // (an empty status crashes the leads list on the frontend). Runs every start.
     db.run(`UPDATE leads SET status = 'new' WHERE status IS NULL OR status = ''`, () => {});
@@ -346,6 +423,56 @@ function logActivity(leadId, userEmail, action, oldValue, newValue, details) {
     [uuidv4(), leadId, userEmail || 'system', action, oldValue || '', newValue || '', details || ''],
     (err) => { if (err) console.error('Activity log error:', err.message); }
   );
+}
+
+// ============ TASK MANAGEMENT HELPERS (Phase 2) ============
+
+// Allowed enum values. Validated here in the API layer because SQLite in this
+// project has no CHECK constraints and FKs are off (same approach as leads).
+const TASK_STATUSES = ['to_do', 'in_progress', 'waiting', 'completed'];
+const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const TASK_CATEGORIES = ['sales', 'customer', 'hes', 'admin', 'accounts', 'purchasing', 'marketing', 'internal', 'other'];
+
+// Rank so `ORDER BY ... DESC` puts urgent first. Plain `ORDER BY priority DESC`
+// sorts the text alphabetically (urgent, medium, low, high) which is wrong.
+const TASK_PRIORITY_RANK = `CASE t.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END`;
+
+// Every task-returning endpoint uses this SELECT so the response shape is
+// identical everywhere (bare `SELECT *` would omit the joined names).
+const TASK_SELECT = `SELECT t.*,
+    assignee.name AS assigned_to_name,
+    creator.name  AS created_by_name
+  FROM tasks t
+  LEFT JOIN users assignee ON assignee.id = t.assigned_to_id
+  LEFT JOIN users creator  ON creator.id  = t.created_by_id`;
+
+const TASK_ORDER = `ORDER BY (t.due_date IS NULL), t.due_date ASC, ${TASK_PRIORITY_RANK} DESC, t.created_at DESC`;
+
+// Record an entry in the task audit trail. Fire-and-forget, like logActivity().
+function logTaskActivity(taskId, userId, action, oldValue = null, newValue = null, details = null) {
+  db.run(
+    `INSERT INTO task_activity (id, task_id, user_id, action, old_value, new_value, details, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [uuidv4(), taskId, userId, action, oldValue, newValue, details, new Date().toISOString()],
+    (err) => { if (err) console.error('Task activity log error:', err.message); }
+  );
+}
+
+// Fetch a raw task row (no permission check, no joins).
+function getTaskById(taskId) {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM tasks WHERE id = ?`, [taskId], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+}
+
+// Admins may touch any task; everyone else only tasks they are assigned or created.
+function canAccessTask(taskRow, userId, userRole) {
+  if (userRole === 'admin') return true;
+  if (!taskRow) return false;
+  return taskRow.assigned_to_id === userId || taskRow.created_by_id === userId;
 }
 
 // ============ AUTH ENDPOINTS ============
@@ -670,6 +797,229 @@ app.get('/api/next-actions/today', authenticateToken, (req, res) => {
       });
     }
   );
+});
+
+// ============ TASK MANAGEMENT ENDPOINTS (Phase 2) ============
+// Registered here (well before the '*' SPA fallback) so they resolve as real
+// API routes. Route order matters: '/api/tasks/my' MUST come before
+// '/api/tasks/:id' or Express captures "my" as an :id.
+
+// POST /api/tasks - create a task
+app.post('/api/tasks', authenticateToken, (req, res) => {
+  const { title, description, assigned_to_id, priority, category, related_lead_id, due_date, due_time } = req.body;
+
+  if (!title || !String(title).trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  if (priority && !TASK_PRIORITIES.includes(priority)) {
+    return res.status(400).json({ error: `Invalid priority. Must be one of: ${TASK_PRIORITIES.join(', ')}` });
+  }
+  if (category && !TASK_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: `Invalid category. Must be one of: ${TASK_CATEGORIES.join(', ')}` });
+  }
+
+  const taskId = uuidv4();
+  const createdById = req.user.id;
+  const now = new Date().toISOString();
+
+  // Non-admins can only create tasks assigned to themselves.
+  let finalAssignedTo = assigned_to_id || createdById;
+  if (req.user.role !== 'admin') finalAssignedTo = createdById;
+
+  db.run(
+    `INSERT INTO tasks
+       (id, title, description, status, priority, category, assigned_to_id, created_by_id,
+        related_lead_id, due_date, due_time, created_at, updated_at)
+     VALUES (?, ?, ?, 'to_do', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [taskId, String(title).trim(), description || null, priority || 'medium', category || null,
+     finalAssignedTo, createdById, related_lead_id || null, due_date || null, due_time || null, now, now],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      logTaskActivity(taskId, createdById, 'created', null, 'Task created', null);
+      db.get(`${TASK_SELECT} WHERE t.id = ?`, [taskId], (err2, task) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.status(201).json(task);
+      });
+    }
+  );
+});
+
+// GET /api/tasks - list active tasks (admins: all, users: own)
+app.get('/api/tasks', authenticateToken, (req, res) => {
+  const { id: userId, role: userRole } = req.user;
+  let query = `${TASK_SELECT} WHERE t.archived = 0`;
+  const params = [];
+  if (userRole !== 'admin') {
+    query += ` AND (t.assigned_to_id = ? OR t.created_by_id = ?)`;
+    params.push(userId, userId);
+  }
+  query += ` ${TASK_ORDER}`;
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+// GET /api/tasks/my - tasks assigned to the current user (must precede /:id)
+app.get('/api/tasks/my', authenticateToken, (req, res) => {
+  db.all(
+    `${TASK_SELECT} WHERE t.assigned_to_id = ? AND t.archived = 0 ${TASK_ORDER}`,
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows || []);
+    }
+  );
+});
+
+// GET /api/tasks/:id - single task with full detail
+app.get('/api/tasks/:id', authenticateToken, async (req, res) => {
+  try {
+    const row = await getTaskById(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Task not found' });
+    if (!canAccessTask(row, req.user.id, req.user.role)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    db.get(`${TASK_SELECT} WHERE t.id = ?`, [req.params.id], (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(task);
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/tasks/:id - update task fields
+app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
+  const taskId = req.params.id;
+  const { id: userId, role: userRole } = req.user;
+  const { title, description, status, priority, category, assigned_to_id, related_lead_id, due_date, due_time } = req.body;
+
+  try {
+    const existing = await getTaskById(taskId);
+    if (!existing) return res.status(404).json({ error: 'Task not found' });
+    if (!canAccessTask(existing, userId, userRole)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    // Non-admins may only progress their own task (status / priority).
+    // Editing the title/description or re-assigning is admin-only.
+    if (userRole !== 'admin' && (title !== undefined || description !== undefined || assigned_to_id !== undefined)) {
+      return res.status(403).json({ error: 'Only admins can change task details' });
+    }
+    if (status !== undefined && !TASK_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${TASK_STATUSES.join(', ')}` });
+    }
+    if (priority !== undefined && !TASK_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ error: `Invalid priority. Must be one of: ${TASK_PRIORITIES.join(', ')}` });
+    }
+    if (category !== undefined && category !== null && !TASK_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: `Invalid category. Must be one of: ${TASK_CATEGORIES.join(', ')}` });
+    }
+
+    const updates = [];
+    const params = [];
+    const setField = (col, val) => { updates.push(`${col} = ?`); params.push(val); };
+
+    if (title !== undefined) setField('title', String(title).trim());
+    if (description !== undefined) setField('description', description);
+    if (priority !== undefined) setField('priority', priority);
+    if (category !== undefined) setField('category', category);
+    if (userRole === 'admin' && assigned_to_id !== undefined) setField('assigned_to_id', assigned_to_id);
+    if (related_lead_id !== undefined) setField('related_lead_id', related_lead_id || null);
+    if (due_date !== undefined) setField('due_date', due_date || null);
+    if (due_time !== undefined) setField('due_time', due_time || null);
+
+    if (status !== undefined) {
+      setField('status', status);
+      if (status === 'completed' && existing.status !== 'completed') {
+        setField('completed_at', new Date().toISOString());
+      } else if (status !== 'completed' && existing.status === 'completed') {
+        setField('completed_at', null);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    setField('updated_at', new Date().toISOString());
+    params.push(taskId);
+
+    db.run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, params, (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (status !== undefined && status !== existing.status) {
+        logTaskActivity(taskId, userId, 'status_changed', existing.status, status, null);
+      }
+      logTaskActivity(taskId, userId, 'updated', null, null, JSON.stringify(req.body));
+      db.get(`${TASK_SELECT} WHERE t.id = ?`, [taskId], (err2, task) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json(task);
+      });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/tasks/:id - soft delete (archived = 1)
+app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
+  const taskId = req.params.id;
+  const { id: userId, role: userRole } = req.user;
+  try {
+    const existing = await getTaskById(taskId);
+    if (!existing) return res.status(404).json({ error: 'Task not found' });
+    // Only an admin or the task's creator may archive it.
+    if (userRole !== 'admin' && existing.created_by_id !== userId) {
+      return res.status(403).json({ error: "Only admins can delete other users' tasks" });
+    }
+    db.run(
+      `UPDATE tasks SET archived = 1, updated_at = ? WHERE id = ?`,
+      [new Date().toISOString(), taskId],
+      (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        logTaskActivity(taskId, userId, 'archived', null, 'Task archived', null);
+        res.json({ message: 'Task archived successfully' });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/tasks/:id/status - quick status change (Kanban drag/drop)
+app.put('/api/tasks/:id/status', authenticateToken, async (req, res) => {
+  const taskId = req.params.id;
+  const { id: userId, role: userRole } = req.user;
+  const { status } = req.body;
+
+  if (!status) return res.status(400).json({ error: 'Status is required' });
+  if (!TASK_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${TASK_STATUSES.join(', ')}` });
+  }
+  try {
+    const existing = await getTaskById(taskId);
+    if (!existing) return res.status(404).json({ error: 'Task not found' });
+    if (!canAccessTask(existing, userId, userRole)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const completedAt = status === 'completed'
+      ? (existing.completed_at || new Date().toISOString())
+      : null;
+    db.run(
+      `UPDATE tasks SET status = ?, completed_at = ?, updated_at = ? WHERE id = ?`,
+      [status, completedAt, new Date().toISOString(), taskId],
+      (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        logTaskActivity(taskId, userId, 'status_changed', existing.status, status, null);
+        db.get(`${TASK_SELECT} WHERE t.id = ?`, [taskId], (err2, task) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+          res.json(task);
+        });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ============ HES ELIGIBILITY ENDPOINTS ============
