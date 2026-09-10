@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import TaskModal from '../components/TaskModal';
 import './Pages.css';
 
 export default function TodaysTasks({ user }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTaskModal, setShowTaskModal] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -26,6 +28,13 @@ export default function TodaysTasks({ user }) {
       setError('Failed to load tasks');
       setLoading(false);
     }
+  };
+
+  const handleTaskCreated = (newTask) => {
+    // Task created successfully - could refresh task list or add to display
+    // For now, just close the modal and show success message
+    setShowTaskModal(false);
+    // Optionally refresh tasks: fetchTasks();
   };
 
   if (loading) return <div className="container"><div className="loading">Loading tasks...</div></div>;
@@ -65,6 +74,13 @@ export default function TodaysTasks({ user }) {
           <h1>Today's Tasks</h1>
           <p>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
+        <button
+          className="primary-button"
+          onClick={() => setShowTaskModal(true)}
+          style={{ background: '#082E58' }}
+        >
+          + New Task
+        </button>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -179,6 +195,14 @@ export default function TodaysTasks({ user }) {
           </div>
         </div>
       </div>
+
+      {/* Task Creation Modal */}
+      <TaskModal
+        isOpen={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        user={user}
+        onTaskCreated={handleTaskCreated}
+      />
     </div>
   );
 }
