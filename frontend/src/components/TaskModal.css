@@ -1,0 +1,449 @@
+/* ============================================================================
+   TASK MODAL - Professional form component for creating team tasks
+   Matches H&R Energy CRM branding (#082E58 navy, #FFCB04 yellow)
+   ============================================================================ */
+
+/* Modal Overlay */
+.task-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Card */
+.task-modal-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.task-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.task-modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #082E58;
+}
+
+.task-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.task-modal-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* Messages */
+.task-modal-message {
+  margin: 12px 24px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-modal-message-success {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.task-modal-message-error {
+  background-color: #ffcdd2;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+/* Form */
+.task-modal-form {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.task-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.task-form-row.full-width {
+  grid-template-columns: 1fr;
+}
+
+/* Form Labels and Inputs */
+.task-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  position: relative;
+}
+
+.task-form-input,
+.task-form-textarea,
+.task-form-select {
+  padding: 10px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.task-form-input:focus,
+.task-form-textarea:focus,
+.task-form-select:focus {
+  outline: none;
+  border-color: #082E58;
+  box-shadow: 0 0 0 3px rgba(8, 46, 88, 0.1);
+}
+
+.task-form-input:disabled,
+.task-form-textarea:disabled,
+.task-form-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.task-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Status Indicator */
+.task-status-indicator {
+  position: absolute;
+  right: 12px;
+  top: 30px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Priority Classes */
+.priority-urgent {
+  border-color: #c62828;
+}
+
+.priority-urgent:focus {
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+}
+
+.priority-high {
+  border-color: #f57c00;
+}
+
+.priority-high:focus {
+  box-shadow: 0 0 0 3px rgba(245, 124, 0, 0.1);
+}
+
+.priority-medium {
+  border-color: #fbc02d;
+}
+
+.priority-medium:focus {
+  box-shadow: 0 0 0 3px rgba(251, 192, 45, 0.1);
+}
+
+.priority-low {
+  border-color: #2e7d32;
+}
+
+.priority-low:focus {
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+/* Loading text */
+.task-form-loading {
+  display: block;
+  padding: 8px;
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Checklist Section */
+.task-checklist-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.task-checklist-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.task-checklist-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.task-checklist-input:focus {
+  outline: none;
+  border-color: #082E58;
+  box-shadow: 0 0 0 3px rgba(8, 46, 88, 0.1);
+}
+
+.task-checklist-add-btn {
+  padding: 10px 16px;
+  background-color: #082E58;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.task-checklist-add-btn:hover:not(:disabled) {
+  background-color: #0d3d7a;
+  box-shadow: 0 2px 8px rgba(8, 46, 88, 0.2);
+}
+
+.task-checklist-add-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.task-checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.task-checklist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: white;
+  border-radius: 4px;
+  border-left: 3px solid #FFCB04;
+  gap: 8px;
+}
+
+.task-checklist-text {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  word-break: break-word;
+}
+
+.task-checklist-remove-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.task-checklist-remove-btn:hover:not(:disabled) {
+  background-color: #ffe0e0;
+  color: #c62828;
+}
+
+.task-checklist-remove-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Buttons */
+.task-modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 8px;
+}
+
+.task-btn {
+  padding: 11px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.task-btn-primary {
+  background-color: #082E58;
+  color: white;
+}
+
+.task-btn-primary:hover:not(:disabled) {
+  background-color: #0d3d7a;
+  box-shadow: 0 4px 12px rgba(8, 46, 88, 0.2);
+  transform: translateY(-1px);
+}
+
+.task-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.task-btn-primary:disabled {
+  background-color: #bbb;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.task-btn-secondary {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.task-btn-secondary:hover:not(:disabled) {
+  background-color: #efefef;
+  border-color: #bbb;
+}
+
+.task-btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .task-modal-overlay {
+    padding: 12px;
+  }
+
+  .task-modal-card {
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+
+  .task-modal-header {
+    padding: 16px;
+  }
+
+  .task-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .task-modal-form {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .task-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .task-modal-buttons {
+    flex-direction: column-reverse;
+    padding: 16px;
+  }
+
+  .task-btn {
+    width: 100%;
+  }
+
+  .task-checklist-input-group {
+    flex-direction: column;
+  }
+
+  .task-checklist-add-btn {
+    width: 100%;
+  }
+}
